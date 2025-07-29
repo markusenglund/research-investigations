@@ -32,7 +32,6 @@ create_plot <- function(data, y_variable, plot_title, y_label, unique_times, y_l
 ramet_types <- c("R0", "R1", "R2")
 plot_list <- list()
 
-
 y_limits_config <- list(
   "Leave 13C atom%" = list(
     "R0" = c(low = -0.2, high = 1.2),
@@ -48,15 +47,24 @@ y_limits_config <- list(
     "R0" = c(low = -0.005, high = 0.035),
     "R1" = c(low = -0.002, high = 0.01),
     "R2" = c(low = -0.002, high = 0.012)
+  ),
+  # --- New soil data limits ---
+  "0-15 Soil13C atom%" = list(
+    "R0" = c(low = -0.0005, high = 0.0025),
+    "R1" = c(low = 0.0, high = 0.005),
+    "R2" = c(low = 0.0, high = 0.005)
+  ),
+  "15-30 Soil 13C atom%" = list(
+    "R0" = c(low = -0.0005, high = 0.0025),
+    "R1" = c(low = 0.0, high = 0.003),
+    "R2" = c(low = 0.0, high = 0.003)
   )
 )
 
 for (ramet_type in ramet_types) {
-  # Filter data for the current ramet type
   current_ramet_data <- carbonFluxData %>%
     filter(Ramets == ramet_type)
   
-  # Get unique times and prepare time sequence for the current ramet data
   unique_times_current <- sort(unique(current_ramet_data$`sample time(d)`))
   current_ramet_data <- current_ramet_data %>%
     mutate(time_seq = match(`sample time(d)`, unique_times_current))
@@ -64,16 +72,16 @@ for (ramet_type in ramet_types) {
   plot_configs <- list(
     list(y_var = "Leave 13C atom%", title_suffix = "leaves", y_lab = "Leave 13C atom%"),
     list(y_var = "Branches 13C atom%", title_suffix = "branches", y_lab = "Branches 13C atom%"),
-    list(y_var = "Roots 13C atom%", title_suffix = "roots", y_lab = "Roots 13C atom%")
+    list(y_var = "Roots 13C atom%", title_suffix = "roots", y_lab = "Roots 13C atom%"),
+    list(y_var = "0-15 Soil13C atom%", title_suffix = "0-15cm soil", y_lab = "0-15cm Soil 13C atom%"),
+    list(y_var = "15-30 Soil 13C atom%", title_suffix = "15-30cm soil", y_lab = "15-30cm Soil 13C atom%")
   )
   
-  # Generate plots for leaves, branches, and roots for the current ramet type
   individual_ramet_plots <- list()
   for (config in plot_configs) {
     y_limits <- y_limits_config[[config$y_var]][[ramet_type]]
     y_low <- y_limits["low"]
     y_high <- y_limits["high"]
-    
     
     plot_title <- paste0(ramet_type, " ramets - ", config$title_suffix)
     p <- create_plot(
@@ -90,7 +98,7 @@ for (ramet_type in ramet_types) {
   
   combined_ramet_plot <- patchwork::wrap_plots(individual_ramet_plots, ncol = 1) +
     plot_annotation(
-      title = paste0("13C Atom% ", ramet_type, " Leaves, Branches, and Roots")
+      title = paste0("13C Atom% ", ramet_type, " - All Compartments")
     ) & theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
   
   plot_list[[ramet_type]] <- combined_ramet_plot
