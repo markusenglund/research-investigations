@@ -3,21 +3,10 @@ library(dplyr)
 library(readxl)
 library(patchwork)
 
-# Load data
-carbonFluxData <- read_excel("Downloads/Data_Dryad_Drought_Decreases_Carbon_Flux_but_Not_Transport_Speed_of_Newly_Fixed_Carbon_from_Leaves_to_Sinks_in_a_Giant_Bamboo_Forest.xlsx",
+carbonFluxData <- read_excel("./Data_Dryad_Drought_Decreases_Carbon_Flux_but_Not_Transport_Speed_of_Newly_Fixed_Carbon_from_Leaves_to_Sinks_in_a_Giant_Bamboo_Forest.xlsx",
                              sheet = "Graph data")
 
-# Filter for R0 data and prepare time sequence
-r0_data <- carbonFluxData %>%
-  filter(Ramets == "R0")
-
-unique_times <- sort(unique(r0_data$`sample time(d)`))
-
-r0_data <- r0_data %>%
-  mutate(time_seq = match(`sample time(d)`, unique_times))
-
-# --- Function to create a plot ---
-create_r0_plot <- function(data, y_variable, plot_title, y_label) {
+create_plot <- function(data, y_variable, plot_title, y_label, unique_times) {
   ggplot(
     data = data,
     mapping = aes(x = time_seq, y = .data[[y_variable]], group = Treatment)
@@ -39,32 +28,47 @@ create_r0_plot <- function(data, y_variable, plot_title, y_label) {
     theme(plot.title = element_text(hjust = 0.5))
 }
 
-# --- Create plots using the function ---
-plot_r0_leaves <- create_r0_plot(
-  data = r0_data,
-  y_variable = "Leave 13C atom%",
-  plot_title = "R0 ramets - leaves",
-  y_label = "Leave 13C atom%"
-)
+ramet_types <- c("R0", "R1", "R2")
+plot_list <- list()
 
-plot_r0_branches <- create_r0_plot(
-  data = r0_data,
-  y_variable = "Branches 13C atom%",
-  plot_title = "R0 Ramets - branches",
-  y_label = "Branches 13C atom%"
-)
+for (ramet_type in ramet_types) {
+  # Filter data for the current ramet type
+  current_ramet_data <- carbonFluxData %>%
+    filter(Ramets == ramet_type)
+  
+  # Get unique times and prepare time sequence for the current ramet data
+  unique_times_current <- sort(unique(current_ramet_data$`sample time(d)`))
+  current_ramet_data <- current_ramet_data %>%
+    mutate(time_seq = match(`sample time(d)`, unique_times_current))
+  
+  plot_configs <- list(
+    list(y_var = "Leave 13C atom%", title_suffix = "leaves", y_lab = "Leave 13C atom%"),
+    list(y_var = "Branches 13C atom%", title_suffix = "branches", y_lab = "Branches 13C atom%"),
+    list(y_var = "Roots 13C atom%", title_suffix = "roots", y_lab = "Roots 13C atom%")
+  )
+  
+  # Generate plots for leaves, branches, and roots for the current ramet type
+  individual_ramet_plots <- list()
+  for (config in plot_configs) {
+    plot_title <- paste0(ramet_type, " ramets - ", config$title_suffix)
+    p <- create_plot(
+      data = current_ramet_data,
+      y_variable = config$y_var,
+      plot_title = plot_title,
+      y_label = config$y_lab,
+      unique_times = unique_times_current # Pass unique_times_current
+    )
+    individual_ramet_plots[[length(individual_ramet_plots) + 1]] <- p
+  }
+  
+  combined_ramet_plot <- patchwork::wrap_plots(individual_ramet_plots, ncol = 1) +
+    plot_annotation(
+      title = paste0("13C Atom% ", ramet_type, " Leaves, Branches, and Roots")
+    ) & theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+  
+  plot_list[[ramet_type]] <- combined_ramet_plot
+}
 
-plot_r0_roots <- create_r0_plot(
-  data = r0_data,
-  y_variable = "Roots 13C atom%",
-  plot_title = "R0 Ramets - roots",
-  y_label = "Roots 13C atom%"
-)
-
-# --- Combine and display the plots ---
-combined_plots <- plot_r0_leaves / plot_r0_branches / plot_r0_roots +
-  plot_annotation(
-    title = "13C Atom% R0 Leaves, Branches, and Roots"
-  ) & theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
-
-print(combined_plots)
+for (ramet_type in ramet_types) {
+  print(plot_list[[ramet_type]])
+}
