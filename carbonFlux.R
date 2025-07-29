@@ -6,7 +6,7 @@ library(patchwork)
 carbonFluxData <- read_excel("./Data_Dryad_Drought_Decreases_Carbon_Flux_but_Not_Transport_Speed_of_Newly_Fixed_Carbon_from_Leaves_to_Sinks_in_a_Giant_Bamboo_Forest.xlsx",
                              sheet = "Graph data")
 
-create_plot <- function(data, y_variable, plot_title, y_label, unique_times) {
+create_plot <- function(data, y_variable, plot_title, y_label, unique_times, y_lim_low, y_lim_high) {
   ggplot(
     data = data,
     mapping = aes(x = time_seq, y = .data[[y_variable]], group = Treatment)
@@ -25,11 +25,31 @@ create_plot <- function(data, y_variable, plot_title, y_label, unique_times) {
       y = y_label
     ) +
     theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
+    theme(plot.title = element_text(hjust = 0.5)) +
+    coord_cartesian(ylim = c(y_lim_low, y_lim_high))
 }
 
 ramet_types <- c("R0", "R1", "R2")
 plot_list <- list()
+
+
+y_limits_config <- list(
+  "Leave 13C atom%" = list(
+    "R0" = c(low = -0.2, high = 1.2),
+    "R1" = c(low = -0.002, high = 0.014),
+    "R2" = c(low = -0.02, high = 0.08)
+  ),
+  "Branches 13C atom%" = list(
+    "R0" = c(low = -0.1, high = 0.5),
+    "R1" = c(low = -0.002, high = 0.012),
+    "R2" = c(low = -0.002, high = 0.01)
+  ),
+  "Roots 13C atom%" = list(
+    "R0" = c(low = -0.005, high = 0.035),
+    "R1" = c(low = -0.002, high = 0.01),
+    "R2" = c(low = -0.002, high = 0.012)
+  )
+)
 
 for (ramet_type in ramet_types) {
   # Filter data for the current ramet type
@@ -50,13 +70,20 @@ for (ramet_type in ramet_types) {
   # Generate plots for leaves, branches, and roots for the current ramet type
   individual_ramet_plots <- list()
   for (config in plot_configs) {
+    y_limits <- y_limits_config[[config$y_var]][[ramet_type]]
+    y_low <- y_limits["low"]
+    y_high <- y_limits["high"]
+    
+    
     plot_title <- paste0(ramet_type, " ramets - ", config$title_suffix)
     p <- create_plot(
       data = current_ramet_data,
       y_variable = config$y_var,
       plot_title = plot_title,
       y_label = config$y_lab,
-      unique_times = unique_times_current # Pass unique_times_current
+      unique_times = unique_times_current,
+      y_lim_low = y_low,
+      y_lim_high = y_high
     )
     individual_ramet_plots[[length(individual_ramet_plots) + 1]] <- p
   }
