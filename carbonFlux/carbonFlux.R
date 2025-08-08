@@ -69,16 +69,21 @@ for (ramet_type in ramet_types) {
   current_ramet_data <- current_ramet_data %>%
     mutate(time_seq = match(`sample time(d)`, unique_times_current))
   
-  plot_configs <- list(
+  # Split configs into tissue and soil
+  tissue_configs <- list(
     list(y_var = "Leave 13C atom%", title_suffix = "leaves", y_lab = "Leave 13C atom%"),
     list(y_var = "Branches 13C atom%", title_suffix = "branches", y_lab = "Branches 13C atom%"),
-    list(y_var = "Roots 13C atom%", title_suffix = "roots", y_lab = "Roots 13C atom%"),
+    list(y_var = "Roots 13C atom%", title_suffix = "roots", y_lab = "Roots 13C atom%")
+  )
+  
+  soil_configs <- list(
     list(y_var = "0-15 Soil13C atom%", title_suffix = "0-15cm soil", y_lab = "0-15cm Soil 13C atom%"),
     list(y_var = "15-30 Soil 13C atom%", title_suffix = "15-30cm soil", y_lab = "15-30cm Soil 13C atom%")
   )
   
-  individual_ramet_plots <- list()
-  for (config in plot_configs) {
+  # Create tissue plots
+  tissue_plots <- list()
+  for (config in tissue_configs) {
     y_limits <- y_limits_config[[config$y_var]][[ramet_type]]
     y_low <- y_limits["low"]
     y_high <- y_limits["high"]
@@ -93,17 +98,46 @@ for (ramet_type in ramet_types) {
       y_lim_low = y_low,
       y_lim_high = y_high
     )
-    individual_ramet_plots[[length(individual_ramet_plots) + 1]] <- p
+    tissue_plots[[length(tissue_plots) + 1]] <- p
   }
   
-  combined_ramet_plot <- patchwork::wrap_plots(individual_ramet_plots, ncol = 1) +
+  # Create soil plots
+  soil_plots <- list()
+  for (config in soil_configs) {
+    y_limits <- y_limits_config[[config$y_var]][[ramet_type]]
+    y_low <- y_limits["low"]
+    y_high <- y_limits["high"]
+    
+    plot_title <- paste0(ramet_type, " ramets - ", config$title_suffix)
+    p <- create_plot(
+      data = current_ramet_data,
+      y_variable = config$y_var,
+      plot_title = plot_title,
+      y_label = config$y_lab,
+      unique_times = unique_times_current,
+      y_lim_low = y_low,
+      y_lim_high = y_high
+    )
+    soil_plots[[length(soil_plots) + 1]] <- p
+  }
+  
+  # Combine into separate plot groups
+  combined_tissue_plot <- wrap_plots(tissue_plots, ncol = 1) +
     plot_annotation(
-      title = paste0("13C Atom% ", ramet_type, " - All Compartments")
+      title = paste0("13C Atom% ", ramet_type, " - Plant Tissues")
     ) & theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
   
-  plot_list[[ramet_type]] <- combined_ramet_plot
+  combined_soil_plot <- wrap_plots(soil_plots, ncol = 1) +
+    plot_annotation(
+      title = paste0("13C Atom% ", ramet_type, " - Soil")
+    ) & theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+  
+  plot_list[[paste0(ramet_type, "_tissues")]] <- combined_tissue_plot
+  plot_list[[paste0(ramet_type, "_soil")]] <- combined_soil_plot
 }
 
+# Print all tissue and soil plots separately
 for (ramet_type in ramet_types) {
-  print(plot_list[[ramet_type]])
+  print(plot_list[[paste0(ramet_type, "_tissues")]])
+  print(plot_list[[paste0(ramet_type, "_soil")]])
 }
